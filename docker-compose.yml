@@ -1,0 +1,105 @@
+services:
+  # 1. Base de données (PostgreSQL)
+  db:
+    image: postgres:16-alpine
+    container_name: hellcase_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Sauvegarde persistante des données sur le VPS
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Ne pas exposer le port 5432 à l'extérieur, seul le réseau interne Docker y accède
+    networks:
+      - app-network
+
+  # 2. pgAdmin (Profil développement local uniquement)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: hellcase_pgadmin
+    restart: unless-stopped
+    profiles:
+      - dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      # Restreint à localhost (127.0.0.1) pour ne pas être exposé publiquement
+      - "127.0.0.1:5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # 3. Cache & Sessions (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: hellcase_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  # 4. API Backend (Node.js / Express / Prisma)
+  backend:
+    build: 
+      context: ./backend
+    container_name: hellcase_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # 5. Serveur Web Frontend (Nginx & React SPA)
+  frontend:
+    build:
+      context: ./frontend
+    container_name: hellcase_frontend
+    restart: unless-stopped
+    ports:
+      # Seul le port 80 est ouvert sur ton serveur (pour l'instant, en attendant le 443 pour HTTPS)
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+# Déclaration des volumes et réseaux
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  app-network:
+    driver: bridge

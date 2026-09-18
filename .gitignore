@@ -1,0 +1,51 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+# Ignored because these folders are extremely heavy and contain all downloaded packages. 
+# They can be easily reproduced by running 'npm install' using the package.json and package-lock.json.
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*.local
+# Ignored because they contain highly sensitive data (database passwords, JWT secrets). 
+# Committing these files is a major security risk. Only .env.example should be tracked.
+
+# =========================
+# Build Outputs
+# =========================
+frontend/dist/
+backend/dist/
+# Ignored because these are auto-generated files created during the build process (e.g., Vite build). 
+# We only want to version the source code, not the compiled result.
+
+# =========================
+# AI Tools & IDE Configurations
+# =========================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+# Ignored to keep the repository clean. These are personal local settings for editors 
+# and AI assistants that shouldn't be forced on other potential contributors.
+
+# =========================
+# Logs & OS Files
+# =========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Ignored because these are system-specific junk files (macOS/Windows) or error logs 
+# that provide no value to the project's source code.
