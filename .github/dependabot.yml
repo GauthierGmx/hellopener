@@ -1,0 +1,88 @@
+version: 2
+updates:
+  # =============================
+  #   UPDATING NPM DEPENDENCIES
+  # =============================
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  # ================================
+  #   UPDATING GITHUB DEPENDENCIES
+  # ================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/.github/actions/setup-node"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+
+  # ================================
+  #   UPDATING DOCKER DEPENDENCIES
+  # ================================
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+  
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-patch:
+        update-types: ["patch"]
+      actions-minor:
+        update-types: ["minor"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5

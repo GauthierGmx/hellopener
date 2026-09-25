@@ -1,0 +1,32 @@
+name: 'Setup Node.js with Cache'
+description: 'Configure Node.js avec cache npm optimisé'
+author: 'Stéphane ROBERT'
+
+inputs:
+  node-version:
+    description: 'Version de Node.js'
+    default: '22'
+  working-directory:
+    description: 'Répertoire de travail'
+    default: '.'
+ 
+outputs:
+  cache-hit:
+    description: 'Cache hit'
+    value: ${{ steps.setup-node.outputs.cache-hit }}
+ 
+runs:
+  using: 'composite'
+  steps:
+    - name: Installer Node.js
+      id: setup-node
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+        cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
+ 
+    - name: Installer les dépendances
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+      shell: bash

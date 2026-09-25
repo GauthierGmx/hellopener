@@ -1,0 +1,117 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+      version:
+        description: "Tag to deploy (default : main = last commit validated by the CI). Enter a specific sha-xxxxx tag for a rollback."
+        required: false
+        default: 'main'
+        type: string
+
+permissions: {}
+
+jobs:
+  verify:
+    name: Verify attestations
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+    timeout-minutes: 5
+    steps:
+      - name: Verify backend image provenance
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          gh attestation verify \
+            "oci://ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.version }}" \
+            --owner "${{ github.repository_owner }}"
+
+      - name: Verify frontend image provenance
+        env:
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          gh attestation verify \
+            "oci://ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.version }}" \
+            --owner "${{ github.repository_owner }}"
+
+  promote-to-deploy:
+    name: Promote and deploy
+    needs: verify
+    runs-on: ubuntu-24.04
+    environment: ${{inputs.environment}}
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 10
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Promote backend image
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.environment }} \
+            ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.version }}
+      
+      - name: Promote frontend image
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.environment }} \
+            ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.version }}
+      
+      - name: Generate .env for production
+        env:
+          POSTGRES_PASSWORD: ${{secrets.POSTGRES_PASSWORD}}
+          DATABASE_URL: ${{secrets.DATABASE_URL}}
+        run: |
+          cat > .env.deploy << EOF
+          POSTGRES_USER=${{vars.POSTGRES_USER}}
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          POSTGRES_DB=${{vars.POSTGRES_DB}}
+          DATABASE_URL=$DATABASE_URL
+          EOF
+      
+      - name: Configure SSH KEY
+        env:
+          VPS_SSH_KEY: ${{secrets.VPS_SSH_KEY}}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          cat > ~/.ssh/deploy_key << 'EOF'
+          $VPS_SSH_KEY
+          EOF
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ vars.VPS_PORT }} -H ${{ vars.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+        
+      - name: Copy .env on the VPS
+        run: |
+          scp -i ~/.ssh/deploy_key -P ${{ vars.VPS_PORT }} \
+            .env.deploy ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}:/home/deploy/app/.env
+
+      - name: Deployment and migration
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{vars.VPS_PORT}} ${{vars.VPS_USER}}@${{vars.VPS_HOST}} << 'ENDSSH'
+            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            cd /home/deploy/app
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml run --rm backend npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml up -d
+          ENDSSH
+
+      - name: Clean SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
