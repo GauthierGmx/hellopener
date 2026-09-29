@@ -32,17 +32,19 @@ jobs:
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
+          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           gh attestation verify \
-            "oci://ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.version }}" \
-            --owner "${{ github.repository_owner }}"
+            "oci://ghcr.io/$OWNER_LOWER/backend:${{ inputs.version }}" \
+            --owner "$OWNER_LOWER"
 
       - name: Verify frontend image provenance
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
+          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           gh attestation verify \
-            "oci://ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.version }}" \
-            --owner "${{ github.repository_owner }}"
+            "oci://ghcr.io/$OWNER_LOWER/frontend:${{ inputs.version }}" \
+            --owner "$OWNER_LOWER"
 
   promote-to-deploy:
     name: Promote and deploy
@@ -60,18 +62,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase owner
+        id: owner
+        run: echo "name=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
       
       - name: Promote backend image
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.environment }} \
-            ghcr.io/${{ github.repository_owner }}/backend:${{ inputs.version }}
+            -t ghcr.io/${{steps.owner.outputs.name}}/backend:${{ inputs.environment }} \
+            ghcr.io/${{steps.owner.outputs.name}}/backend:${{ inputs.version }}
       
       - name: Promote frontend image
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.environment }} \
-            ghcr.io/${{ github.repository_owner }}/frontend:${{ inputs.version }}
+            -t ghcr.io/${{steps.owner.outputs.name}}/frontend:${{ inputs.environment }} \
+            ghcr.io/${{steps.owner.outputs.name}}/frontend:${{ inputs.version }}
       
       - name: Generate .env for production
         env:
