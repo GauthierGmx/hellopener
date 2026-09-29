@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/<ton-user-ou-org>/backend:latest
+    image: ghcr.io/gauthiergmx/backend:latest
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${PORT}
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/<ton-user-ou-org>/frontend:latest
+    image: ghcr.io/gauthiergmx/frontend:latest
     ports:
       - "80:8080"
     depends_on:
