@@ -31,6 +31,7 @@ jobs:
       - name: Verify backend image provenance
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          OWNER: ${{ github.repository_owner }}
         run: |
           OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           gh attestation verify \
@@ -40,6 +41,7 @@ jobs:
       - name: Verify frontend image provenance
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          OWNER: ${{ github.repository_owner }}
         run: |
           OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           gh attestation verify \
@@ -90,6 +92,7 @@ jobs:
           POSTGRES_DB=${{vars.POSTGRES_DB}}
           DATABASE_URL=$DATABASE_URL
           EOF
+          chmod 600 .env.deploy
       
       - name: Configure SSH KEY
         env:
@@ -97,7 +100,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          cat > ~/.ssh/deploy_key << 'EOF'
+          cat > ~/.ssh/deploy_key << EOF
           $VPS_SSH_KEY
           EOF
           chmod 600 ~/.ssh/deploy_key
