@@ -87,6 +87,7 @@ jobs:
           DATABASE_URL: ${{secrets.DATABASE_URL}}
         run: |
           cat > .env.deploy << EOF
+          PORT=3000
           POSTGRES_USER=${{vars.POSTGRES_USER}}
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
           POSTGRES_DB=${{vars.POSTGRES_DB}}

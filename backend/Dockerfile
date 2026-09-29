@@ -31,6 +31,7 @@ COPY --from=builder /app/dist ./dist
 
 # Copying prisma folder needed for migration
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 # Non-root user
 USER node
