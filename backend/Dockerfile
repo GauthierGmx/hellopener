@@ -29,12 +29,15 @@ RUN npm ci --omit=dev
 # Compiled files (TypeScript) from the builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copying prisma folder needed for migration
+COPY --from=builder /app/prisma ./prisma
+
 # Non-root user
 USER node
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["node", "dist/index.js"]
