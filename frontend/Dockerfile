@@ -19,7 +19,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # --------- Stage 2 : Production (Nginx) --------- 
-FROM nginx:1.30-alpine@sha256:985220252f3863977e468f611ef118ebd01421289dd86ee1ae99cb068c3bce2b AS production
+FROM nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 AS production
 
 # Copy the custom Nginx configuration file to the container
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
