@@ -12,3 +12,65 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  USER
+  ADMIN
+}
+model User {
+  id                    String    @id @default(cuid())
+  username              String    @unique @db.VarChar(32)
+  email                 String    @unique @db.VarChar(255)
+  passwordHash          String    @db.VarChar(255)
+  role                  Role      @default(USER)
+  balance               Int       @default(10000) // 100.00 credits
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  lastLoginAt           DateTime?
+  lastPasswordChangeAt  DateTime?
+
+  failedLoginCount      Int       @default(0)
+  lockedUntil           DateTime?
+  lastRechargedAt       DateTime?
+  refreshTokens         RefreshToken[]
+  authEvents            AuthEvent[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique @db.VarChar(64) // SHA-256 hex
+  familyId  String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+enum TypeAuthEvent {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  ACCOUNT_LOCKED
+  REGISTER
+  LOGOUT
+  PASSWORD_CHANGE
+  REFRESH_REUSE
+}
+model AuthEvent {
+  id        String        @id @default(cuid())
+  userId    String?       // null si l'email n'existe pas
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      TypeAuthEvent
+  ip        String?       @db.VarChar(45) // IPv6 max length
+  userAgent String?       @db.VarChar(255)
+  createdAt DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
+}

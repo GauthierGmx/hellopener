@@ -9,6 +9,10 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"],
+  "include": [
+    "src/**/*",
+    "types/**/*",
+    "lib/**/*",
+  ],
   "exclude": ["node_modules", "dist", "generated"]
 }
