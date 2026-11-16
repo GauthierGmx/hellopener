@@ -71,12 +71,12 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 /**
  * Hashes a refresh token using SHA-256.
  * SHA-256 is enough because the token is already random with high entropy, so it cannot be guessed or brute-forced from its hash.
- * The hash must be deterministc, so we can find the matching row in the database
+ * The hash must be deterministic, so we can find the matching row in the database
  * @param raw The raw refresh token, as received from the client cookie.
  * @returns The hash of the refresh token.
  */
 export function hashRefreshToken(raw: string): string {
-  return createHash("sha256").update(raw).digest("hex"); // 64 caractères hexadécimaux
+  return createHash("sha256").update(raw).digest("hex");
 }
 
 /**
