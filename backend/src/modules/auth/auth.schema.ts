@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_DISTINCT_CHARS, PASSWORD_MIN_LENGTH } from "../../config/constants.js";
+import { containsUserInfo, isRepeatedPattern, isCommonPassword, countDistinctChars } from "../../lib/password-policy.js";
 
 /**
  * Validates an email address using normalization and a test for a valid email format.
@@ -16,12 +18,51 @@ const emailSchema = z
 
 /**
  * Validates a password
- * Based on NIST guidelines, a long password is preferable to a complex one, so we only check for length and not for complexity.
+ * Based on NIST guidelines, a long password is preferable to a complex one, so I don't enforce complexity requirements, but we do enforce a minimum length and a maximum length
+ * I also check for repeated patterns, common passwords and distinct characters to avoid weak passwords
+ * The password is normalized using Unicode normalization (NFKC) before validation
  */
 const passwordSchema = z
   .string()
-  .min(16, "Must be at least 16 characters long")
-  .max(128, "Must be at most 128 characters long");
+  .normalize("NFKC")
+  .superRefine(
+    (password, ctx) => {
+      if (password.length < PASSWORD_MIN_LENGTH) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters long`,
+        });
+      }
+
+      if (password.length > PASSWORD_MAX_LENGTH) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Password must be at most ${PASSWORD_MAX_LENGTH} characters long`,
+        });
+      }
+
+      if (isRepeatedPattern(password)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Password cannot contain repeated patterns",
+        });
+      }
+
+      if (isCommonPassword(password)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Password is too common",
+        });
+      }
+
+      if (countDistinctChars(password) < PASSWORD_MIN_DISTINCT_CHARS) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Password must contain at least ${PASSWORD_MIN_DISTINCT_CHARS} distinct characters`,
+        });
+      }
+    }
+  );
 
 /**
  * Validates a username using a regular expression.
@@ -44,11 +85,23 @@ const usernameSchema = z
  * Validates the request body for the register endpoint.
  * The body must contain an email, a password and a username.
  */
-export const registerSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  username: usernameSchema,
-});
+export const registerSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    username: usernameSchema,
+  })
+  .superRefine(
+    (data, ctx) => {
+      if (containsUserInfo(data.password, { username: data.username, email: data.email })) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["password"],
+          message: "Password cannot contain username or email",
+        });
+      }
+    }
+  );
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 /**
@@ -59,7 +112,8 @@ export const loginSchema = z.object({
   email: emailSchema,
   password: z
     .string()
+    .normalize("NFKC")
     .min(1, "Must be at least 1 character long")
-    .max(128, "Must be at most 128 characters long"),
+    .max(PASSWORD_MAX_LENGTH, `Must be at most ${PASSWORD_MAX_LENGTH} characters long`),
 });
 export type LoginInput = z.infer<typeof loginSchema>;

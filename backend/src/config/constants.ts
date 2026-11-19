@@ -5,3 +5,7 @@ export const LIMIT_ATTEMPT_BEFORE_LOCK_ACCOUNT = 5
 export const DURATION_LOCK_ACCOUNT_MS = 15 * 60 * 1000 // 15min
 export const RETENTION_PERIOD_LOGS_MS = 180 * 24 * 60 * 60 * 1000 // 180 days (around 6 months)
 export const GRACE_REFRESH_PERIOD_MS = 5 * 1000 // 5sec
+
+export const PASSWORD_MIN_LENGTH = 24;
+export const PASSWORD_MAX_LENGTH = 128;
+export const PASSWORD_MIN_DISTINCT_CHARS = 8;
